@@ -97,6 +97,25 @@ describe Fantail::Proxy do
 		registry&.close
 	end
 	
+	it "removes content-length from responses without a body" do
+		client = Fantail::Fixtures::Client.new do
+			Protocol::HTTP::Response[304, {"etag" => "abc", "content-length" => "0"}, nil]
+		end
+		
+		registry = make_registry{|_endpoint| client}
+		registry.replace([{name: "worker-1", url: "http://127.0.0.1:9301"}])
+		proxy = subject.new(registry)
+		
+		response = proxy.call(Protocol::HTTP::Request["GET", "/cached"])
+		
+		expect(response.status).to be == 304
+		expect(response.headers).not.to be(:include?, "content-length")
+		expect(response.headers["etag"]).to be == "abc"
+	ensure
+		response&.close
+		registry&.close
+	end
+	
 	it "releases the exchange if response wrapping fails" do
 		broken_response = Object.new
 		broken_response.define_singleton_method(:body){Protocol::HTTP::Body::Buffered.wrap(["Okay"])}
