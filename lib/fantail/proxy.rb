@@ -41,6 +41,7 @@ module Fantail
 			if body = response.body
 				response.body = ResponseBody.new(body){backend_reservation.release}
 			else
+				response.headers.delete("content-length")
 				backend_reservation.release
 			end
 			reservation = nil
